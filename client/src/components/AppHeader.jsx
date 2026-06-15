@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Pill, ShoppingBasket, LogOut } from "lucide-react";
+import { Pill, ShoppingBasket, MapPin, LogOut } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { useFavorites } from "@/context/FavoritesContext";
@@ -25,7 +25,13 @@ export default function AppHeader() {
           <span className="text-lg font-bold tracking-tight">Dava Darpan</span>
         </Link>
 
-        <nav className="flex items-center gap-2 sm:gap-3">
+        <nav className="flex items-center gap-1 sm:gap-2">
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/kendras">
+              <MapPin className="size-4" />
+              <span className="hidden sm:inline">Find Kendra</span>
+            </Link>
+          </Button>
           <Button asChild variant="ghost" size="sm">
             <Link to="/favorites">
               <ShoppingBasket className="size-4" />

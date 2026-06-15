@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 
 import { importMedicines } from "./importMedicines.js";
 import { importBrands } from "./importBrands.js";
+import { importKendras } from "./importKendras.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, "..", ".env") });
@@ -21,6 +22,7 @@ async function seed() {
 
     await importMedicines();
     await importBrands();
+    await importKendras();
 
     console.log("\n🌱 Seed complete.");
   } catch (err) {

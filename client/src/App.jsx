@@ -5,6 +5,7 @@ import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import Compare from "@/pages/Compare";
 import Favorites from "@/pages/Favorites";
+import Kendras from "@/pages/Kendras";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 /**
@@ -39,6 +40,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Favorites />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/kendras"
+        element={
+          <ProtectedRoute>
+            <Kendras />
           </ProtectedRoute>
         }
       />

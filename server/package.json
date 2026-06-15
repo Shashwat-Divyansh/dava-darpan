@@ -10,7 +10,8 @@
     "start": "node server.js",
     "seed": "node scripts/seed.js",
     "seed:medicines": "node scripts/importMedicines.js",
-    "seed:brands": "node scripts/importBrands.js"
+    "seed:brands": "node scripts/importBrands.js",
+    "seed:kendras": "node scripts/importKendras.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

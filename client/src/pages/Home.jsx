@@ -1,4 +1,5 @@
-import { MapPin, Heart } from "lucide-react";
+import { Link } from "react-router-dom";
+import { MapPin, ShoppingBasket } from "lucide-react";
 
 import AppHeader from "@/components/AppHeader";
 import { Badge } from "@/components/ui/badge";
@@ -39,20 +40,23 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Coming-soon preview */}
+        {/* Quick links to the other features */}
         <section className="mx-auto mt-20 grid max-w-2xl gap-6 sm:grid-cols-2">
           {[
-            { icon: MapPin, title: "Find Kendras", desc: "Locate nearby Jan Aushadhi stores by PIN or city." },
-            { icon: Heart, title: "Favorites & History", desc: "Save medicines and revisit your searches." },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="rounded-xl border bg-card p-6 text-left shadow-sm">
+            { icon: MapPin, title: "Find a Kendra", desc: "Locate nearby Jan Aushadhi stores by PIN or district.", to: "/kendras" },
+            { icon: ShoppingBasket, title: "My Basket", desc: "Track your saved medicines and total savings.", to: "/favorites" },
+          ].map(({ icon: Icon, title, desc, to }) => (
+            <Link
+              key={title}
+              to={to}
+              className="rounded-xl border bg-card p-6 text-left shadow-sm transition-shadow hover:shadow-md"
+            >
               <div className="flex items-center gap-2">
                 <Icon className="size-5 text-primary" />
                 <h3 className="font-semibold">{title}</h3>
-                <Badge variant="secondary" className="ml-auto">Soon</Badge>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">{desc}</p>
-            </div>
+            </Link>
           ))}
         </section>
       </main>
