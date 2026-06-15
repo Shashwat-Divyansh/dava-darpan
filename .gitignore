@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment variables (never commit secrets)
+.env
+.env.local
+**/.env
+
+# Build output
+dist/
+build/
+client/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Large data files (CSV is imported into MongoDB via seed script, not committed)
+server/data/*.csv

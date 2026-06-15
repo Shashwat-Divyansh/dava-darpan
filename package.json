@@ -1,0 +1,16 @@
+{
+  "name": "dava-darpan",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Compare branded medicines with their Jan Aushadhi (generic) equivalents and find nearby Jan Aushadhi kendras.",
+  "scripts": {
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"blue,green\" \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "seed": "npm run seed --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
