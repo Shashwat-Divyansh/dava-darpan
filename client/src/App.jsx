@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
+import Compare from "@/pages/Compare";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 /**
@@ -21,6 +22,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Home />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/compare/:brandId"
+        element={
+          <ProtectedRoute>
+            <Compare />
           </ProtectedRoute>
         }
       />

@@ -3,41 +3,113 @@ import mongoose from "mongoose";
 
 import Medicine from "../models/Medicine.js";
 import Brand from "../models/Brand.js";
+import { requireAuth } from "../middleware/requireAuth.js";
+import { buildComparison } from "../utils/pricing.js";
 
 const router = Router();
 
-/** Round to a whole rupee for clean display. */
-const r = (n) => Math.round(n);
-
-/**
- * Build the savings view for a brand given its matching generics (already sorted
- * cheapest-first). Returns null pieces gracefully when there are no matches.
- * NOTE: brand MRP and generic MRP can be for different pack sizes, so savings is
- * an approximate per-pack comparison — good enough to prove the concept.
- */
-function buildSavings(brand, generics) {
-  if (!generics.length) {
-    return { cheapestGeneric: null, savings: null, savingsPercent: null };
-  }
-  const cheapest = generics[0];
-  const savings = brand.mrp - cheapest.mrp;
-  const savingsPercent = brand.mrp > 0 ? r((savings / brand.mrp) * 100) : null;
-  return {
-    cheapestGeneric: {
-      genericName: cheapest.genericName,
-      mrp: cheapest.mrp,
-      unitSize: cheapest.unitSize,
-    },
-    savings: r(savings),
-    savingsPercent,
-  };
+/** Escape a user string so it can be used safely inside a RegExp. */
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
+ * GET /api/medicines/search?q=...   (protected)
+ * Powers the autocomplete. Matches brands by name OR composition, ranks
+ * name-starts-with first, then name-contains, then composition matches.
+ * Returns a lean payload of up to 10 results.
+ */
+router.get("/search", requireAuth, async (req, res) => {
+  try {
+    const q = (req.query.q || "").trim();
+    if (!q) return res.json({ results: [] });
+
+    const safe = escapeRegex(q);
+    const contains = new RegExp(safe, "i");
+    const startsWith = new RegExp("^" + safe, "i");
+
+    // One DB query: any brand whose name OR composition contains the query.
+    const brands = await Brand.find({
+      $or: [{ brandName: contains }, { composition: contains }],
+    })
+      .limit(30)
+      .lean();
+
+    // Rank: name starts-with (0) < name contains (1) < composition-only (2),
+    // then alphabetical within each tier.
+    const rank = (b) => {
+      if (startsWith.test(b.brandName)) return 0;
+      if (contains.test(b.brandName)) return 1;
+      return 2;
+    };
+    brands.sort((a, b) => rank(a) - rank(b) || a.brandName.localeCompare(b.brandName));
+
+    const results = brands.slice(0, 10).map((b) => ({
+      id: b._id,
+      brandName: b.brandName,
+      composition: b.composition,
+      manufacturer: b.manufacturer,
+    }));
+
+    res.json({ results });
+  } catch (err) {
+    console.error("search error:", err);
+    res.status(500).json({ error: "Search failed" });
+  }
+});
+
+/**
+ * GET /api/medicines/match/:brandId   (protected)
+ * Returns the brand plus every Jan Aushadhi generic sharing its composition key,
+ * priced per-unit and sorted cheapest-first, with savings vs the cheapest.
+ * hasGenericEquivalent tells the UI whether to show a comparison or an honest
+ * "no equivalent" state.
+ */
+router.get("/match/:brandId", requireAuth, async (req, res) => {
+  try {
+    const { brandId } = req.params;
+    if (!mongoose.isValidObjectId(brandId)) {
+      return res.status(400).json({ error: "Invalid brand id" });
+    }
+
+    const brand = await Brand.findById(brandId).lean();
+    if (!brand) return res.status(404).json({ error: "Brand not found" });
+
+    const generics = brand.compositionKey
+      ? await Medicine.find({ compositionKey: brand.compositionKey }).lean()
+      : [];
+
+    const cmp = buildComparison(brand, generics);
+
+    res.json({
+      brand: {
+        id: brand._id,
+        brandName: brand.brandName,
+        manufacturer: brand.manufacturer,
+        composition: brand.composition,
+        mrp: brand.mrp,
+        packSize: brand.packSize,
+        packCount: cmp.brandPackCount,
+        perUnitPrice: cmp.brandPerUnit,
+      },
+      compositionKey: brand.compositionKey,
+      hasGenericEquivalent: cmp.cheapest !== null,
+      matchCount: cmp.pricedGenerics.length,
+      cheapestGeneric: cmp.cheapest,
+      savingsPerUnit: cmp.savingsPerUnit,
+      savingsPercent: cmp.savingsPercent,
+      generics: cmp.pricedGenerics, // already per-unit priced, cheapest first
+    });
+  } catch (err) {
+    console.error("match error:", err);
+    res.status(500).json({ error: "Failed to find matches" });
+  }
+});
+
+/**
  * GET /api/medicines/stats
- * Proves the data is loaded AND that brand→generic matching works.
- * Returns counts, which brands have no generic match (and why we'd care),
- * and a handful of concrete sample matches with computed savings.
+ * Verification endpoint (left open): data counts, which brands have no generic
+ * match, and a few sample matches with per-unit savings.
  */
 router.get("/stats", async (req, res) => {
   try {
@@ -48,7 +120,6 @@ router.get("/stats", async (req, res) => {
       Medicine.distinct("compositionKey"),
     ]);
 
-    // Set of composition keys that actually exist among the generics.
     const keySet = new Set(medicineKeys.filter(Boolean));
 
     const matchedBrands = [];
@@ -58,17 +129,17 @@ router.get("/stats", async (req, res) => {
       else unmatchedBrands.push({ brandName: b.brandName, composition: b.composition, compositionKey: b.compositionKey });
     }
 
-    // Build 5 concrete sample matches (brand + its cheapest generic + savings).
     const sampleMatches = [];
     for (const b of matchedBrands.slice(0, 5)) {
-      const generics = await Medicine.find({ compositionKey: b.compositionKey })
-        .sort({ mrp: 1 })
-        .lean();
+      const generics = await Medicine.find({ compositionKey: b.compositionKey }).lean();
+      const cmp = buildComparison(b, generics);
       sampleMatches.push({
-        brand: { brandName: b.brandName, composition: b.composition, mrp: b.mrp },
+        brand: { brandName: b.brandName, composition: b.composition, mrp: b.mrp, packSize: b.packSize, perUnitPrice: cmp.brandPerUnit },
         compositionKey: b.compositionKey,
-        matchedGenericCount: generics.length,
-        ...buildSavings(b, generics),
+        matchedGenericCount: cmp.pricedGenerics.length,
+        cheapestGeneric: cmp.cheapest && { genericName: cmp.cheapest.genericName, mrp: cmp.cheapest.mrp, unitSize: cmp.cheapest.unitSize, perUnitPrice: cmp.cheapest.perUnitPrice },
+        savingsPerUnit: cmp.savingsPerUnit,
+        savingsPercent: cmp.savingsPercent,
       });
     }
 
@@ -83,53 +154,6 @@ router.get("/stats", async (req, res) => {
   } catch (err) {
     console.error("stats error:", err);
     res.status(500).json({ error: "Failed to compute stats" });
-  }
-});
-
-/**
- * GET /api/medicines/match/:brandId
- * Given a brand, return the brand plus every Jan Aushadhi generic that shares its
- * composition key, sorted cheapest-first, with computed savings.
- */
-router.get("/match/:brandId", async (req, res) => {
-  try {
-    const { brandId } = req.params;
-    if (!mongoose.isValidObjectId(brandId)) {
-      return res.status(400).json({ error: "Invalid brand id" });
-    }
-
-    const brand = await Brand.findById(brandId).lean();
-    if (!brand) {
-      return res.status(404).json({ error: "Brand not found" });
-    }
-
-    // No key (couldn't parse composition) → no possible matches.
-    const generics = brand.compositionKey
-      ? await Medicine.find({ compositionKey: brand.compositionKey }).sort({ mrp: 1 }).lean()
-      : [];
-
-    res.json({
-      brand: {
-        id: brand._id,
-        brandName: brand.brandName,
-        manufacturer: brand.manufacturer,
-        composition: brand.composition,
-        mrp: brand.mrp,
-        packSize: brand.packSize,
-      },
-      compositionKey: brand.compositionKey,
-      matchCount: generics.length,
-      ...buildSavings(brand, generics),
-      generics: generics.map((g) => ({
-        genericName: g.genericName,
-        mrp: g.mrp,
-        unitSize: g.unitSize,
-        group: g.group,
-      })),
-    });
-  } catch (err) {
-    console.error("match error:", err);
-    res.status(500).json({ error: "Failed to find matches" });
   }
 });
 

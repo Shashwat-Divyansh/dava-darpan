@@ -1,13 +1,14 @@
 import { useNavigate } from "react-router-dom";
-import { Pill, Search, MapPin, Heart, LogOut } from "lucide-react";
+import { Pill, MapPin, Heart, LogOut } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import SearchBar from "@/components/SearchBar";
 
 /**
- * Protected home page. Only reachable when logged in (see <ProtectedRoute>).
- * Greets the user and offers a logout button; the feature cards preview what's
- * coming in later phases.
+ * Protected home page. The search bar is the primary action: search a branded
+ * medicine to jump to its Jan Aushadhi comparison.
  */
 export default function Home() {
   const { user, logout } = useAuth();
@@ -17,13 +18,6 @@ export default function Home() {
     await logout();
     navigate("/login");
   }
-
-  const features = [
-    { icon: Search, title: "Smart Search", desc: "Autocomplete branded medicines as you type." },
-    { icon: Pill, title: "Compare & Save", desc: "See generic equivalents and how much you save." },
-    { icon: MapPin, title: "Find Kendras", desc: "Locate nearby Jan Aushadhi stores by PIN or city." },
-    { icon: Heart, title: "Favorites", desc: "Save medicines and revisit your search history." },
-  ];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -46,28 +40,45 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero */}
-      <main className="mx-auto max-w-5xl px-6 py-16">
+      {/* Search hero */}
+      <main className="mx-auto max-w-5xl px-6 py-20">
         <section className="text-center">
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
-            Welcome, {user?.name?.split(" ")[0]}! 👋
+            Find the generic.{" "}
+            <span className="text-primary">Save on every prescription.</span>
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            You&apos;re logged in. Soon you&apos;ll be able to compare branded medicines with their
-            Jan Aushadhi generics and find the nearest kendra. Here&apos;s what&apos;s coming:
+            Search a branded medicine to see its Jan Aushadhi (generic) equivalent and exactly how much you&apos;d save.
           </p>
+
+          <div className="mt-8">
+            <SearchBar />
+          </div>
+
+          {/* Non-clickable hints to guide the demo */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
+            <span>Try:</span>
+            {["Dolo 650", "Combiflam", "Pan-D", "Montair-LC"].map((name) => (
+              <Badge key={name} variant="outline" className="font-normal">
+                {name}
+              </Badge>
+            ))}
+          </div>
         </section>
 
-        {/* Feature preview cards */}
-        <section className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map(({ icon: Icon, title, desc }) => (
-            <div
-              key={title}
-              className="rounded-xl border bg-card p-6 text-left shadow-sm transition-shadow hover:shadow-md"
-            >
-              <Icon className="size-8 text-primary" />
-              <h3 className="mt-4 font-semibold">{title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
+        {/* Coming-soon preview */}
+        <section className="mx-auto mt-20 grid max-w-2xl gap-6 sm:grid-cols-2">
+          {[
+            { icon: MapPin, title: "Find Kendras", desc: "Locate nearby Jan Aushadhi stores by PIN or city." },
+            { icon: Heart, title: "Favorites & History", desc: "Save medicines and revisit your searches." },
+          ].map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="rounded-xl border bg-card p-6 text-left shadow-sm">
+              <div className="flex items-center gap-2">
+                <Icon className="size-5 text-primary" />
+                <h3 className="font-semibold">{title}</h3>
+                <Badge variant="secondary" className="ml-auto">Soon</Badge>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{desc}</p>
             </div>
           ))}
         </section>
