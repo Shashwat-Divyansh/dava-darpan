@@ -8,7 +8,9 @@
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "seed:medicines": "node scripts/importMedicines.js",
+    "seed:brands": "node scripts/importBrands.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

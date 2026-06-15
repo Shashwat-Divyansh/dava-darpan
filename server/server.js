@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { connectDB } from "./config/db.js";
 import healthRoutes from "./routes/health.js";
 import authRoutes from "./routes/auth.js";
+import medicineRoutes from "./routes/medicines.js";
 
 // Load environment variables from server/.env, resolved relative to THIS file so
 // it works no matter which directory the server is started from.
@@ -36,6 +37,7 @@ app.use(cookieParser());    // parse the "token" cookie into req.cookies
 // ----- Routes -----
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/medicines", medicineRoutes);
 
 // Root route so hitting the base URL in a browser shows something friendly
 app.get("/", (req, res) => {
