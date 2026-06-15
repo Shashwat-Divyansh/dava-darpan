@@ -5,6 +5,7 @@ import Medicine from "../models/Medicine.js";
 import Brand from "../models/Brand.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { buildComparison } from "../utils/pricing.js";
+import { buildBrandComparison } from "../services/comparison.js";
 
 const router = Router();
 
@@ -75,31 +76,8 @@ router.get("/match/:brandId", requireAuth, async (req, res) => {
     const brand = await Brand.findById(brandId).lean();
     if (!brand) return res.status(404).json({ error: "Brand not found" });
 
-    const generics = brand.compositionKey
-      ? await Medicine.find({ compositionKey: brand.compositionKey }).lean()
-      : [];
-
-    const cmp = buildComparison(brand, generics);
-
-    res.json({
-      brand: {
-        id: brand._id,
-        brandName: brand.brandName,
-        manufacturer: brand.manufacturer,
-        composition: brand.composition,
-        mrp: brand.mrp,
-        packSize: brand.packSize,
-        packCount: cmp.brandPackCount,
-        perUnitPrice: cmp.brandPerUnit,
-      },
-      compositionKey: brand.compositionKey,
-      hasGenericEquivalent: cmp.cheapest !== null,
-      matchCount: cmp.pricedGenerics.length,
-      cheapestGeneric: cmp.cheapest,
-      savingsPerUnit: cmp.savingsPerUnit,
-      savingsPercent: cmp.savingsPercent,
-      generics: cmp.pricedGenerics, // already per-unit priced, cheapest first
-    });
+    // Shared comparison logic (also used by the favorites route).
+    res.json(await buildBrandComparison(brand));
   } catch (err) {
     console.error("match error:", err);
     res.status(500).json({ error: "Failed to find matches" });

@@ -4,6 +4,8 @@ import { ArrowLeft, PiggyBank, CheckCircle2, Info } from "lucide-react";
 
 import api from "@/lib/api";
 import { formatINR, unitLabel } from "@/lib/currency";
+import AppHeader from "@/components/AppHeader";
+import FavoriteButton from "@/components/FavoriteButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,6 +42,7 @@ export default function Compare() {
 
   return (
     <div className="min-h-screen bg-muted/30">
+      <AppHeader />
       <div className="mx-auto max-w-4xl px-4 py-8">
         <Button asChild variant="ghost" size="sm" className="mb-4">
           <Link to="/">
@@ -69,6 +72,9 @@ function Result({ data }) {
           {brand.composition}
           {brand.manufacturer ? ` · ${brand.manufacturer}` : ""}
         </p>
+        <div className="mt-4 flex justify-center">
+          <FavoriteButton brandId={brand.id} />
+        </div>
       </header>
 
       {hasGenericEquivalent ? (

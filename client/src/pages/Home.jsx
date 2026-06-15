@@ -1,8 +1,6 @@
-import { useNavigate } from "react-router-dom";
-import { Pill, MapPin, Heart, LogOut } from "lucide-react";
+import { MapPin, Heart } from "lucide-react";
 
-import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button";
+import AppHeader from "@/components/AppHeader";
 import { Badge } from "@/components/ui/badge";
 import SearchBar from "@/components/SearchBar";
 
@@ -11,34 +9,9 @@ import SearchBar from "@/components/SearchBar";
  * medicine to jump to its Jan Aushadhi comparison.
  */
 export default function Home() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  async function handleLogout() {
-    await logout();
-    navigate("/login");
-  }
-
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Top bar with greeting + logout */}
-      <header className="border-b">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <Pill className="size-6 text-primary" />
-            <span className="text-lg font-bold tracking-tight">Dava Darpan</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="hidden text-sm text-muted-foreground sm:inline">
-              Welcome, <span className="font-medium text-foreground">{user?.name}</span>
-            </span>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="size-4" />
-              Log out
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Search hero */}
       <main className="mx-auto max-w-5xl px-6 py-20">

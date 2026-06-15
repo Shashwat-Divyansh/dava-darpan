@@ -21,3 +21,10 @@ export function unitLabel(packSize) {
   if (s.includes("ml")) return "ml";
   return "unit";
 }
+
+/** Pluralized count label, e.g. (20, "20 tablets") -> "20 tablets", (1, ...) -> "1 tablet". */
+export function unitsLabel(count, packSize) {
+  const noun = unitLabel(packSize);
+  if (noun === "ml") return `${count} ml`;
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}

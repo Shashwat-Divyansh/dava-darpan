@@ -4,6 +4,7 @@ import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import Compare from "@/pages/Compare";
+import Favorites from "@/pages/Favorites";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 /**
@@ -30,6 +31,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Compare />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/favorites"
+        element={
+          <ProtectedRoute>
+            <Favorites />
           </ProtectedRoute>
         }
       />
