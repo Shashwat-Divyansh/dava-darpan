@@ -2,14 +2,18 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 
+import { AuthProvider } from "@/context/AuthContext";
 import App from "./App.jsx";
 import "./index.css";
 
-// BrowserRouter is set up now so adding routes in later phases is a one-line change.
+// AuthProvider lives inside BrowserRouter so auth actions can use router hooks,
+// and wraps App so every route/component can read the current user via useAuth().
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>
 );

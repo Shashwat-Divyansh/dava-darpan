@@ -1,27 +1,41 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 import { connectDB } from "./config/db.js";
 import healthRoutes from "./routes/health.js";
+import authRoutes from "./routes/auth.js";
 
 // Load environment variables from server/.env, resolved relative to THIS file so
 // it works no matter which directory the server is started from.
+// override: true makes .env the source of truth for local dev, so a PORT that a
+// dev tool may inject into the environment can't override our configured 5001.
+// (In production there is no .env file, so real environment variables still win.)
 const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: join(__dirname, ".env") });
+dotenv.config({ path: join(__dirname, ".env"), override: true });
 
 const app = express();
 // Port 5001 by default: on macOS, port 5000 is taken by the AirPlay Receiver.
 const PORT = process.env.PORT || 5001;
 
 // ----- Global middleware -----
-app.use(cors());            // allow the React client (different port) to call this API
+// credentials: true + an explicit origin lets the browser send/receive the
+// httpOnly auth cookie when the client calls the API directly (cross-port).
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 app.use(express.json());    // parse incoming JSON request bodies
+app.use(cookieParser());    // parse the "token" cookie into req.cookies
 
 // ----- Routes -----
 app.use("/api/health", healthRoutes);
+app.use("/api/auth", authRoutes);
 
 // Root route so hitting the base URL in a browser shows something friendly
 app.get("/", (req, res) => {
