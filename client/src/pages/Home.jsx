@@ -42,13 +42,30 @@ export default function Home() {
       {/* Search hero */}
       <main className="mx-auto max-w-5xl px-6 py-20">
         <section className="text-center">
-          <p className="mb-3 text-sm text-muted-foreground">
-            Welcome back{user?.name ? `, ${user.name}` : ""} 👋
-          </p>
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
-            Find the generic.{" "}
-            <span className="text-primary">Save on every prescription.</span>
-          </h1>
+          {user ? (
+            <>
+              {/* Logged in: the personalized greeting is the big hero. */}
+              <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
+                Welcome back, {user.name} 👋
+              </h1>
+              {/* Strong secondary: bigger/bolder than before, but still a notch
+                  below the greeting so the hierarchy stays clear. */}
+              <p className="mx-auto mt-2 max-w-2xl text-2xl font-bold tracking-tight sm:text-3xl">
+                Find the generic. <span className="text-primary">Save on every prescription.</span>
+              </p>
+            </>
+          ) : (
+            <>
+              {/* Guest: the tagline is the big hero (no "Welcome back"). */}
+              <p className="mb-3 text-sm text-muted-foreground">
+                Welcome 👋 — find affordable generic medicines.
+              </p>
+              <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
+                Find the generic.{" "}
+                <span className="text-primary">Save on every prescription.</span>
+              </h1>
+            </>
+          )}
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
             Search a branded medicine to see its Jan Aushadhi (generic) equivalent and exactly how much you&apos;d save.
           </p>

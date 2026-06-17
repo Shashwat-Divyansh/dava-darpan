@@ -4,7 +4,6 @@ import mongoose from "mongoose";
 import Medicine from "../models/Medicine.js";
 import Brand from "../models/Brand.js";
 import Kendra from "../models/Kendra.js";
-import { requireAuth } from "../middleware/requireAuth.js";
 import { buildComparison } from "../utils/pricing.js";
 import { buildBrandComparison } from "../services/comparison.js";
 
@@ -16,12 +15,12 @@ function escapeRegex(str) {
 }
 
 /**
- * GET /api/medicines/search?q=...   (protected)
+ * GET /api/medicines/search?q=...   (public — guests can browse)
  * Powers the autocomplete. Matches brands by name OR composition, ranks
  * name-starts-with first, then name-contains, then composition matches.
  * Returns a lean payload of up to 10 results.
  */
-router.get("/search", requireAuth, async (req, res) => {
+router.get("/search", async (req, res) => {
   try {
     const q = (req.query.q || "").trim();
     if (!q) return res.json({ results: [] });
@@ -61,13 +60,13 @@ router.get("/search", requireAuth, async (req, res) => {
 });
 
 /**
- * GET /api/medicines/match/:brandId   (protected)
+ * GET /api/medicines/match/:brandId   (public — guests can browse)
  * Returns the brand plus every Jan Aushadhi generic sharing its composition key,
  * priced per-unit and sorted cheapest-first, with savings vs the cheapest.
  * hasGenericEquivalent tells the UI whether to show a comparison or an honest
  * "no equivalent" state.
  */
-router.get("/match/:brandId", requireAuth, async (req, res) => {
+router.get("/match/:brandId", async (req, res) => {
   try {
     const { brandId } = req.params;
     if (!mongoose.isValidObjectId(brandId)) {

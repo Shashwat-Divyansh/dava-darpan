@@ -10,44 +10,24 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 
 /**
  * App routes.
- * - "/login" and "/signup" are public.
- * - "/" is wrapped in <ProtectedRoute>, so unauthenticated users are redirected
- *   to /login.
+ * - Public (guests welcome): "/" (search), "/compare/:brandId", "/kendras",
+ *   plus "/login" and "/signup".
+ * - Protected: "/favorites" (basket) — saving requires an account, so guests
+ *   are redirected to login.
  */
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Home />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/compare/:brandId"
-        element={
-          <ProtectedRoute>
-            <Compare />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/" element={<Home />} />
+      <Route path="/compare/:brandId" element={<Compare />} />
+      <Route path="/kendras" element={<Kendras />} />
       <Route
         path="/favorites"
         element={
           <ProtectedRoute>
             <Favorites />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/kendras"
-        element={
-          <ProtectedRoute>
-            <Kendras />
           </ProtectedRoute>
         }
       />

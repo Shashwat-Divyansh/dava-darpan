@@ -1,14 +1,18 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Pill, ShoppingBasket, MapPin, LogOut } from "lucide-react";
+import { Pill, ShoppingBasket, MapPin, LogOut, LogIn } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 import { useFavorites } from "@/context/FavoritesContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-/** Shared top nav for protected pages: brand, basket link (with count), logout. */
+/**
+ * Shared top nav. Shows the app name and "Find Kendra" for everyone.
+ * Logged-in users get the basket (with count) and Log out; guests get a basket
+ * link that routes to login, plus Log in / Sign up.
+ */
 export default function AppHeader() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { favorites } = useFavorites();
   const navigate = useNavigate();
 
@@ -32,17 +36,34 @@ export default function AppHeader() {
               <span className="hidden sm:inline">Find Kendra</span>
             </Link>
           </Button>
+
+          {/* Basket: guests are sent to login (it's account-only). */}
           <Button asChild variant="ghost" size="sm">
-            <Link to="/favorites">
+            <Link to={user ? "/favorites" : "/login?redirect=/favorites"}>
               <ShoppingBasket className="size-4" />
               <span className="hidden sm:inline">My Basket</span>
-              {favorites.length > 0 && <Badge className="ml-1">{favorites.length}</Badge>}
+              {user && favorites.length > 0 && <Badge className="ml-1">{favorites.length}</Badge>}
             </Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="size-4" />
-            <span className="hidden sm:inline">Log out</span>
-          </Button>
+
+          {user ? (
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="size-4" />
+              <span className="hidden sm:inline">Log out</span>
+            </Button>
+          ) : (
+            <>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/login">
+                  <LogIn className="size-4" />
+                  <span className="hidden sm:inline">Log in</span>
+                </Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link to="/signup">Sign up</Link>
+              </Button>
+            </>
+          )}
         </nav>
       </div>
     </header>

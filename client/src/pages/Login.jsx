@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Pill } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
@@ -17,6 +17,12 @@ import {
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Where to go after a successful login. Only allow internal paths (must start
+  // with "/") to avoid open-redirects; default to home.
+  const redirectParam = searchParams.get("redirect");
+  const redirectTo = redirectParam && redirectParam.startsWith("/") ? redirectParam : "/";
 
   const [form, setForm] = useState({ email: "", password: "" });
   const [fieldErrors, setFieldErrors] = useState({});
@@ -45,7 +51,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       await login(form);
-      navigate("/"); // success → protected home
+      navigate(redirectTo); // success → back where they came from (or home)
     } catch (err) {
       // The server returns a generic "Invalid credentials" message on purpose.
       setApiError(err.response?.data?.error || "Could not log in. Please try again.");
@@ -114,7 +120,10 @@ export default function Login() {
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
-            <Link to="/signup" className="font-medium text-primary hover:underline">
+            <Link
+              to={redirectParam ? `/signup?redirect=${encodeURIComponent(redirectParam)}` : "/signup"}
+              className="font-medium text-primary hover:underline"
+            >
               Sign up
             </Link>
           </p>

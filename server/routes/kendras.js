@@ -1,11 +1,10 @@
 import { Router } from "express";
 
 import Kendra from "../models/Kendra.js";
-import { requireAuth } from "../middleware/requireAuth.js";
 
 const router = Router();
-router.use(requireAuth); // all kendra routes require login
 
+// Public routes — guests can use the kendra finder without an account.
 const RESULT_CAP = 100; // keep payloads reasonable for broad searches
 
 /** Shape a kendra document for the API response. */

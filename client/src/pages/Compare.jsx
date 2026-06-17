@@ -4,6 +4,7 @@ import { ArrowLeft, PiggyBank, CheckCircle2, Info } from "lucide-react";
 
 import api from "@/lib/api";
 import { formatINR, unitLabel } from "@/lib/currency";
+import { useAuth } from "@/context/AuthContext";
 import AppHeader from "@/components/AppHeader";
 import FavoriteButton from "@/components/FavoriteButton";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,7 @@ export default function Compare() {
 }
 
 function Result({ data }) {
+  const { user } = useAuth();
   const { brand, hasGenericEquivalent, cheapestGeneric, savingsPerUnit, savingsPercent, generics, matchCount } = data;
   const unit = unitLabel(brand.packSize);
 
@@ -72,8 +74,11 @@ function Result({ data }) {
           {brand.composition}
           {brand.manufacturer ? ` · ${brand.manufacturer}` : ""}
         </p>
-        <div className="mt-4 flex justify-center">
+        <div className="mt-4 flex flex-col items-center gap-1">
           <FavoriteButton brandId={brand.id} />
+          {!user && (
+            <p className="text-xs text-muted-foreground">Log in to save this to your basket.</p>
+          )}
         </div>
       </header>
 
