@@ -1,6 +1,9 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { MapPin, ShoppingBasket } from "lucide-react";
 
+import api from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import AppHeader from "@/components/AppHeader";
 import { Badge } from "@/components/ui/badge";
 import SearchBar from "@/components/SearchBar";
@@ -10,6 +13,28 @@ import SearchBar from "@/components/SearchBar";
  * medicine to jump to its Jan Aushadhi comparison.
  */
 export default function Home() {
+  const { user } = useAuth();
+  // Live data counts for the stat line (fetched, not hardcoded).
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get("/medicines/stats");
+        if (!cancelled) setStats(data);
+      } catch {
+        if (!cancelled) setStats(null); // stat line just won't render
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Indian-format numbers, e.g. 19380 -> "19,380".
+  const fmt = (n) => Number(n).toLocaleString("en-IN");
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
@@ -17,6 +42,9 @@ export default function Home() {
       {/* Search hero */}
       <main className="mx-auto max-w-5xl px-6 py-20">
         <section className="text-center">
+          <p className="mb-3 text-sm text-muted-foreground">
+            Welcome back{user?.name ? `, ${user.name}` : ""} 👋
+          </p>
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
             Find the generic.{" "}
             <span className="text-primary">Save on every prescription.</span>
@@ -24,6 +52,13 @@ export default function Home() {
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
             Search a branded medicine to see its Jan Aushadhi (generic) equivalent and exactly how much you&apos;d save.
           </p>
+
+          {stats && (
+            <p className="mx-auto mt-2 text-xs text-muted-foreground">
+              Comparing {fmt(stats.genericCount)} Jan Aushadhi generics · {fmt(stats.brandCount)} branded medicines ·{" "}
+              {fmt(stats.kendraCount)} kendras nationwide.
+            </p>
+          )}
 
           <div className="mt-8">
             <SearchBar />
@@ -63,7 +98,7 @@ export default function Home() {
 
       <footer className="border-t">
         <div className="mx-auto max-w-5xl px-6 py-6 text-center text-sm text-muted-foreground">
-          Dava Darpan · A student project · {new Date().getFullYear()}
+          Dava Darpan · Helping Indians find affordable generic medicines · Built by Shashwat · {new Date().getFullYear()}
         </div>
       </footer>
     </div>

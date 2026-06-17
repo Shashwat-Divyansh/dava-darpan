@@ -64,6 +64,9 @@ export default function Login() {
           </div>
           <CardTitle className="text-2xl">Welcome back</CardTitle>
           <CardDescription>Log in to your account</CardDescription>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Sign in to save medicines to your basket and track your total savings.
+          </p>
         </CardHeader>
 
         <CardContent>

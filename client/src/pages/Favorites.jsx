@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Trash2, PiggyBank, ShoppingBasket, Info } from "lucide-react";
+import { Trash2, PiggyBank, ShoppingBasket, Info, MapPin } from "lucide-react";
 
 import { useFavorites } from "@/context/FavoritesContext";
 import { formatINR, unitsLabel, unitLabel as unitLabelOf } from "@/lib/currency";
@@ -182,6 +182,22 @@ function SummaryCard({ totals }) {
           <p className="mt-1 text-3xl font-extrabold text-green-700 dark:text-green-400">{formatINR(savings)}</p>
           <p className="text-xs text-green-700/80 dark:text-green-400/80">{savingsPercent}% less than branded</p>
         </div>
+
+        {/* Nudge to act on the savings by visiting a kendra — only when there's
+            an actual saving from at least one generic-equivalent item. */}
+        {savings > 0 && (
+          <div className="rounded-xl border border-green-200 bg-green-50/70 p-3 dark:border-green-900 dark:bg-green-950/30">
+            <p className="flex items-start gap-2 text-xs text-green-800 dark:text-green-300">
+              <MapPin className="mt-0.5 size-3.5 shrink-0" />
+              Ready to save {formatINR(savings)}? Find a Jan Aushadhi Kendra near you to buy these generics.
+            </p>
+            <Button asChild size="sm" className="mt-2 w-full bg-green-600 hover:bg-green-700">
+              <Link to="/kendras">
+                <MapPin className="size-4" /> Find a Kendra →
+              </Link>
+            </Button>
+          </div>
+        )}
 
         {noEquivCount > 0 && (
           <p className="flex items-start gap-2 text-xs text-muted-foreground">

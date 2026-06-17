@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 
 import Medicine from "../models/Medicine.js";
 import Brand from "../models/Brand.js";
+import Kendra from "../models/Kendra.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { buildComparison } from "../utils/pricing.js";
 import { buildBrandComparison } from "../services/comparison.js";
@@ -91,9 +92,10 @@ router.get("/match/:brandId", requireAuth, async (req, res) => {
  */
 router.get("/stats", async (req, res) => {
   try {
-    const [genericCount, brandCount, brands, medicineKeys] = await Promise.all([
+    const [genericCount, brandCount, kendraCount, brands, medicineKeys] = await Promise.all([
       Medicine.countDocuments(),
       Brand.countDocuments(),
+      Kendra.countDocuments(),
       Brand.find().lean(),
       Medicine.distinct("compositionKey"),
     ]);
@@ -124,6 +126,7 @@ router.get("/stats", async (req, res) => {
     res.json({
       genericCount,
       brandCount,
+      kendraCount,
       matchedBrandCount: matchedBrands.length,
       unmatchedBrandCount: unmatchedBrands.length,
       unmatchedBrands,
