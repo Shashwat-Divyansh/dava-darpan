@@ -2,11 +2,14 @@ import axios from "axios";
 
 /**
  * Shared axios instance for all API calls.
- * - baseURL "/api" is proxied to the Express server by Vite (see vite.config.js).
+ * - In production, VITE_API_URL points at the deployed backend
+ *   (e.g. https://dava-darpan-api.onrender.com/api).
+ * - Locally it falls back to "/api", which the Vite dev proxy forwards to the
+ *   Express server (see vite.config.js).
  * - withCredentials: true makes the browser send & store the httpOnly auth cookie.
  */
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: import.meta.env.VITE_API_URL || "/api",
   withCredentials: true,
 });
 

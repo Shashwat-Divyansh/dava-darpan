@@ -12,24 +12,36 @@ import medicineRoutes from "./routes/medicines.js";
 import favoriteRoutes from "./routes/favorites.js";
 import kendraRoutes from "./routes/kendras.js";
 
-// Load environment variables from server/.env, resolved relative to THIS file so
-// it works no matter which directory the server is started from.
-// override: true makes .env the source of truth for local dev, so a PORT that a
-// dev tool may inject into the environment can't override our configured 5001.
-// (In production there is no .env file, so real environment variables still win.)
+// Load environment variables from server/.env in development only. In production
+// (Render), env vars come from the dashboard, not a file. override: true makes
+// .env the source of truth locally, so a PORT a dev tool may inject can't override
+// our configured 5001. dotenv.config() is a no-op (no throw) if the file is absent.
 const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: join(__dirname, ".env"), override: true });
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config({ path: join(__dirname, ".env"), override: true });
+}
 
 const app = express();
+
+// Render (and most hosts) run the app behind a reverse proxy. Trusting the first
+// proxy lets Express see the original HTTPS protocol, which "secure" cookies need.
+app.set("trust proxy", 1);
+
 // Port 5001 by default: on macOS, port 5000 is taken by the AirPlay Receiver.
+// In production, Render injects its own PORT.
 const PORT = process.env.PORT || 5001;
+
+// The deployed frontend origin. Configurable so the same code works in prod
+// (Vercel URL) and locally (Vite dev server). Must be a specific origin — not a
+// wildcard — because credentialed (cookie) requests forbid "*".
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
 
 // ----- Global middleware -----
 // credentials: true + an explicit origin lets the browser send/receive the
-// httpOnly auth cookie when the client calls the API directly (cross-port).
+// httpOnly auth cookie when the client calls the API cross-origin.
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: CLIENT_URL,
     credentials: true,
   })
 );

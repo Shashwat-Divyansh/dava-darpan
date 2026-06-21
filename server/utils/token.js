@@ -25,22 +25,29 @@ export function signToken(user) {
 }
 
 /**
- * Base options for the auth cookie. Reused when clearing the cookie on logout
- * (clearCookie must be given matching options to reliably remove it).
- * - httpOnly: JavaScript on the page can't read it (protects against XSS token theft)
- * - secure: false for local http dev — set true behind HTTPS in production
- * - sameSite "lax": sent on top-level navigations; fine for our same-origin dev proxy
+ * Base options for the auth cookie — environment-aware. The SAME options must be
+ * used to set and to clear the cookie, so both call this single helper.
+ *
+ * - httpOnly: JavaScript on the page can't read it (protects against XSS token theft).
+ * - Production (NODE_ENV === "production"): sameSite "none" + secure true, which
+ *   browsers require for a cookie sent cross-domain (Vercel frontend ↔ Render API)
+ *   over HTTPS.
+ * - Development: sameSite "lax" + secure false, so it works on local http where
+ *   the Vite proxy makes things same-origin.
  */
-export const baseCookieOptions = {
-  httpOnly: true,
-  secure: false,
-  sameSite: "lax",
-};
+export function getBaseCookieOptions() {
+  const isProd = process.env.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+  };
+}
 
 /** Full cookie options including maxAge, used when setting the cookie. */
 export function getCookieOptions() {
   return {
-    ...baseCookieOptions,
+    ...getBaseCookieOptions(),
     maxAge: durationToMs(process.env.JWT_EXPIRES_IN || "7d"),
   };
 }

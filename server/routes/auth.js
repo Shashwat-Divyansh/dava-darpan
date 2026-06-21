@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import User, { EMAIL_REGEX } from "../models/User.js";
-import { signToken, getCookieOptions, baseCookieOptions } from "../utils/token.js";
+import { signToken, getCookieOptions, getBaseCookieOptions } from "../utils/token.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 
 const router = Router();
@@ -105,7 +105,7 @@ router.post("/login", async (req, res) => {
  * Clears the auth cookie.
  */
 router.post("/logout", (req, res) => {
-  res.clearCookie("token", baseCookieOptions);
+  res.clearCookie("token", getBaseCookieOptions());
   return res.status(200).json({ message: "Logged out" });
 });
 
