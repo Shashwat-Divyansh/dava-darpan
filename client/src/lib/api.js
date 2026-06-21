@@ -9,7 +9,7 @@ import axios from "axios";
  * - withCredentials: true makes the browser send & store the httpOnly auth cookie.
  */
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "/api",
+  baseURL: import.meta.env.VITE_API_URL || "https://dava-darpan-api.onrender.com/api",
   withCredentials: true,
 });
 
