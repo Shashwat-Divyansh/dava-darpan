@@ -26,7 +26,7 @@ export default function AppHeader() {
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
         <Link to="/" className="flex items-center gap-2">
           <Pill className="size-6 text-primary" />
-          <span className="text-lg font-bold tracking-tight">Dava Darpan</span>
+          <span className="font-display text-xl font-bold tracking-tight">Dava Darpan</span>
         </Link>
 
         <nav className="flex items-center gap-1 sm:gap-2">

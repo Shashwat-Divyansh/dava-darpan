@@ -100,7 +100,7 @@ export default function Kendras() {
       <AppHeader />
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <header className="mb-6">
-          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+          <h1 className="font-display flex items-center gap-2 text-3xl font-bold tracking-tight">
             <MapPin className="size-6 text-primary" />
             Find a Jan Aushadhi Kendra near you
           </h1>
@@ -238,7 +238,7 @@ function Results({ result }) {
                   {k.state}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
-                  <Badge variant="secondary">PIN {k.pinCode}</Badge>
+                  <Badge variant="saffron">PIN {k.pinCode}</Badge>
                   <span className="text-xs text-muted-foreground">{k.kendraCode}</span>
                 </div>
               </div>

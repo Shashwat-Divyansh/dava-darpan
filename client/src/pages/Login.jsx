@@ -66,9 +66,9 @@ export default function Login() {
         <CardHeader className="text-center">
           <div className="mx-auto mb-2 flex items-center gap-2">
             <Pill className="size-6 text-primary" />
-            <span className="text-lg font-bold">Dava Darpan</span>
+            <span className="font-display text-lg font-bold">Dava Darpan</span>
           </div>
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
+          <CardTitle className="font-display text-2xl font-bold">Welcome back</CardTitle>
           <CardDescription>Log in to your account</CardDescription>
           <p className="mt-1 text-xs text-muted-foreground">
             Sign in to save medicines to your basket and track your total savings.

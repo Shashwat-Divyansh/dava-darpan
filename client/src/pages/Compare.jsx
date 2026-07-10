@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { formatINR, unitLabel } from "@/lib/currency";
 import { useAuth } from "@/context/AuthContext";
 import AppHeader from "@/components/AppHeader";
+import CountUp from "@/components/CountUp";
 import FavoriteButton from "@/components/FavoriteButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +70,7 @@ function Result({ data }) {
       {/* Brand header */}
       <header className="text-center">
         <Badge variant="secondary" className="mb-2">Branded medicine</Badge>
-        <h1 className="text-3xl font-extrabold tracking-tight">{brand.brandName}</h1>
+        <h1 className="font-display text-4xl font-bold tracking-tight">{brand.brandName}</h1>
         <p className="mt-1 text-muted-foreground">
           {brand.composition}
           {brand.manufacturer ? ` · ${brand.manufacturer}` : ""}
@@ -90,8 +91,9 @@ function Result({ data }) {
               <PiggyBank className="size-6" />
               <span className="text-sm font-semibold uppercase tracking-wide">You save</span>
             </div>
-            <div className="mt-1 text-5xl font-extrabold text-green-700 dark:text-green-400">
-              {formatINR(savingsPerUnit)}
+            {/* The signature moment: the savings figure counts up as it lands. */}
+            <div className="font-display mt-1 text-6xl font-black text-green-700 dark:text-green-400">
+              <CountUp value={savingsPerUnit} format={formatINR} />
               <span className="text-2xl font-semibold"> / {unit}</span>
             </div>
             <p className="mt-2 text-sm text-green-800/80 dark:text-green-400/80">
@@ -173,9 +175,9 @@ function PriceCard({ tag, title, subtitle, perUnit, unit, packPrice, packSize, t
         <p className="text-xs text-muted-foreground">{subtitle}</p>
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-extrabold">
+        <div className="font-display text-3xl font-bold">
           {formatINR(perUnit)}
-          <span className="text-base font-medium text-muted-foreground"> / {unit}</span>
+          <span className="font-sans text-base font-medium text-muted-foreground"> / {unit}</span>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           {formatINR(packPrice)} for {packSize}

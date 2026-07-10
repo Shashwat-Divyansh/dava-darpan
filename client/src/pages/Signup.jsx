@@ -72,9 +72,9 @@ export default function Signup() {
         <CardHeader className="text-center">
           <div className="mx-auto mb-2 flex items-center gap-2">
             <Pill className="size-6 text-primary" />
-            <span className="text-lg font-bold">Dava Darpan</span>
+            <span className="font-display text-lg font-bold">Dava Darpan</span>
           </div>
-          <CardTitle className="text-2xl">Create your account</CardTitle>
+          <CardTitle className="font-display text-2xl font-bold">Create your account</CardTitle>
           <CardDescription>Start comparing medicines and saving money</CardDescription>
         </CardHeader>
 

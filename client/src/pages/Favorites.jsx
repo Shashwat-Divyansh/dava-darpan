@@ -5,6 +5,7 @@ import { Trash2, PiggyBank, ShoppingBasket, Info, MapPin } from "lucide-react";
 import { useFavorites } from "@/context/FavoritesContext";
 import { formatINR, unitsLabel, unitLabel as unitLabelOf } from "@/lib/currency";
 import AppHeader from "@/components/AppHeader";
+import CountUp from "@/components/CountUp";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -64,7 +65,7 @@ export default function Favorites() {
       <AppHeader />
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <header className="mb-6">
-          <h1 className="text-2xl font-extrabold tracking-tight">My Medicine Basket</h1>
+          <h1 className="font-display text-3xl font-bold tracking-tight">My Medicine Basket</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Tick the medicines you buy to estimate how much you&apos;d save by choosing Jan Aushadhi generics.
           </p>
@@ -143,7 +144,7 @@ function FavoriteRow({ item, checked, onToggle, onRemove }) {
               </div>
             ) : (
               <div className="flex flex-col justify-center rounded-lg border border-dashed p-3">
-                <Badge variant="secondary" className="mb-1 w-fit">No generic</Badge>
+                <Badge variant="saffron" className="mb-1 w-fit">No generic</Badge>
                 <p className="text-xs text-muted-foreground">No cheaper generic available — branded price only.</p>
               </div>
             )}
@@ -179,7 +180,10 @@ function SummaryCard({ totals }) {
             <PiggyBank className="size-5" />
             <span className="text-xs font-semibold uppercase tracking-wide">Total savings</span>
           </div>
-          <p className="mt-1 text-3xl font-extrabold text-green-700 dark:text-green-400">{formatINR(savings)}</p>
+          {/* This page's one animation moment: the live total counts to its new value. */}
+          <p className="font-display mt-1 text-4xl font-black text-green-700 dark:text-green-400">
+            <CountUp value={savings} format={formatINR} duration={600} />
+          </p>
           <p className="text-xs text-green-700/80 dark:text-green-400/80">{savingsPercent}% less than branded</p>
         </div>
 
