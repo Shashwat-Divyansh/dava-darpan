@@ -1,21 +1,28 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, ShoppingBasket } from "lucide-react";
+import { MapPin, ShoppingBasket, Search, ListOrdered, CheckCircle2, ArrowRight } from "lucide-react";
 
 import api from "@/lib/api";
+import { formatINR, unitLabel } from "@/lib/currency";
 import { useAuth } from "@/context/AuthContext";
 import AppHeader from "@/components/AppHeader";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import SearchBar from "@/components/SearchBar";
 
+// The composition used for the homepage's live example. Only the KEY is fixed —
+// all prices/brands are fetched from the database, never hardcoded.
+const EXAMPLE_KEY = "paracetamol|650mg";
+
 /**
- * Protected home page. The search bar is the primary action: search a branded
- * medicine to jump to its Jan Aushadhi comparison.
+ * Homepage. A first-time visitor must instantly get it:
+ * hero states the payoff → the search bar is the action → a LIVE example
+ * comparison shows the value before they type anything → how it works → stats.
  */
 export default function Home() {
   const { user } = useAuth();
-  // Live data counts for the stat line (fetched, not hardcoded).
   const [stats, setStats] = useState(null);
+  const [example, setExample] = useState(null); // live comparison preview data
 
   useEffect(() => {
     let cancelled = false;
@@ -24,7 +31,16 @@ export default function Home() {
         const { data } = await api.get("/medicines/stats");
         if (!cancelled) setStats(data);
       } catch {
-        if (!cancelled) setStats(null); // stat line just won't render
+        /* stat line just won't render */
+      }
+    })();
+    (async () => {
+      try {
+        const { data } = await api.get(`/medicines/compare/${encodeURIComponent(EXAMPLE_KEY)}`);
+        // Only show the preview when it can honestly demonstrate savings.
+        if (!cancelled && data.hasGeneric && data.brands.length > 0) setExample(data);
+      } catch {
+        /* example section just won't render */
       }
     })();
     return () => {
@@ -32,68 +48,92 @@ export default function Home() {
     };
   }, []);
 
-  // Indian-format numbers, e.g. 19380 -> "19,380".
   const fmt = (n) => Number(n).toLocaleString("en-IN");
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
 
-      {/* Search hero */}
-      <main className="mx-auto max-w-5xl px-6 py-20">
+      <main className="mx-auto max-w-5xl px-6 pb-20 pt-16">
+        {/* ---------- HERO ---------- */}
         <section className="text-center">
-          {user ? (
-            <>
-              {/* Logged in: the personalized greeting is the big hero. */}
-              <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
-                Welcome back, {user.name} 👋
-              </h1>
-              {/* Strong secondary: bigger/bolder than before, but still a notch
-                  below the greeting so the hierarchy stays clear. */}
-              <p className="font-display mx-auto mt-3 max-w-2xl text-2xl font-semibold tracking-tight sm:text-3xl">
-                Find the generic. <span className="text-primary">Save on every prescription.</span>
-              </p>
-            </>
-          ) : (
-            <>
-              {/* Guest: the tagline is the big hero (no "Welcome back"). */}
-              <p className="mb-3 text-sm text-muted-foreground">
-                Welcome 👋 — find affordable generic medicines.
-              </p>
-              <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
-                Find the generic.{" "}
-                <span className="text-primary">Save on every prescription.</span>
-              </h1>
-            </>
+          {user && (
+            <p className="mb-3 text-sm text-muted-foreground">Welcome back, {user.name} 👋</p>
           )}
-          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            Search a branded medicine to see its Jan Aushadhi (generic) equivalent and exactly how much you&apos;d save.
+          <h1 className="font-display mx-auto max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl">
+            The same medicine. <span className="text-primary">Up to 70% cheaper.</span>
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground sm:text-lg">
+            Branded medicines have Jan Aushadhi generic equivalents — the same composition, sold at
+            government-set prices. Dava Darpan shows you both, side by side.
           </p>
 
-          {stats && (
-            <p className="mx-auto mt-2 text-xs text-muted-foreground">
-              Comparing {fmt(stats.genericCount)} Jan Aushadhi generics · {fmt(stats.brandCount)} branded medicines ·{" "}
-              {fmt(stats.kendraCount)} kendras nationwide.
-            </p>
-          )}
-
-          <div className="mt-8">
+          {/* THE hero action */}
+          <div className="mt-9">
             <SearchBar />
           </div>
-
-          {/* Non-clickable hints to guide the demo */}
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
             <span>Try:</span>
-            {["Dolo 650", "Combiflam", "Pan-D", "Montair-LC"].map((name) => (
+            {["Paracetamol 650", "Dolo", "Combiflam", "Telmisartan"].map((name) => (
               <Badge key={name} variant="saffron" className="font-medium">
                 {name}
               </Badge>
             ))}
           </div>
+
+          {stats && (
+            <p className="mt-5 text-xs text-muted-foreground">
+              Comparing {fmt(stats.genericCount)} Jan Aushadhi generics · {fmt(stats.kendraCount)}{" "}
+              kendras nationwide.
+            </p>
+          )}
         </section>
 
-        {/* Quick links to the other features */}
-        <section className="mx-auto mt-20 grid max-w-2xl gap-6 sm:grid-cols-2">
+        {/* ---------- LIVE EXAMPLE (real data, true preview) ---------- */}
+        {example && <LiveExample data={example} />}
+
+        {/* ---------- HOW IT WORKS ---------- */}
+        <section className="mx-auto mt-24 max-w-3xl">
+          <h2 className="font-display text-center text-2xl font-bold tracking-tight">
+            How it works
+          </h2>
+          <div className="mt-8 grid gap-6 sm:grid-cols-3">
+            {[
+              {
+                icon: Search,
+                step: "1",
+                title: "Search your prescription",
+                desc: "Type the composition on your strip — or the brand name you know.",
+              },
+              {
+                icon: ListOrdered,
+                step: "2",
+                title: "See every option, ranked",
+                desc: "All brands and the Jan Aushadhi price for that exact composition and strength.",
+              },
+              {
+                icon: MapPin,
+                step: "3",
+                title: "Buy it near you",
+                desc: "Find a Jan Aushadhi kendra by PIN code or district.",
+              },
+            ].map(({ icon: Icon, step, title, desc }) => (
+              <div key={step} className="text-center">
+                <div className="mx-auto flex size-11 items-center justify-center rounded-full bg-primary/10">
+                  <Icon className="size-5 text-primary" />
+                </div>
+                <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Step {step}
+                </p>
+                <h3 className="mt-1 font-semibold">{title}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ---------- QUICK LINKS ---------- */}
+        <section className="mx-auto mt-24 grid max-w-2xl gap-6 sm:grid-cols-2">
           {[
             { icon: MapPin, title: "Find a Kendra", desc: "Locate nearby Jan Aushadhi stores by PIN or district.", to: "/kendras" },
             { icon: ShoppingBasket, title: "My Basket", desc: "Track your saved medicines and total savings.", to: "/favorites" },
@@ -115,9 +155,87 @@ export default function Home() {
 
       <footer className="border-t">
         <div className="mx-auto max-w-5xl px-6 py-6 text-center text-sm text-muted-foreground">
-          Dava Darpan · Helping Indians find affordable generic medicines · Built by Shashwat · {new Date().getFullYear()}
+          Dava Darpan · Helping Indians find affordable generic medicines · Built by Shashwat ·{" "}
+          {new Date().getFullYear()}
         </div>
       </footer>
     </div>
+  );
+}
+
+/**
+ * A REAL comparison, fetched from the DB, that visually mirrors the comparison
+ * page — so visitors see the value before typing anything.
+ */
+function LiveExample({ data }) {
+  const { label, generic, brands, compositionKey, savingsPercentUnit } = data;
+  const cheapestBrand = brands[0]; // ranked by per-tablet price
+  const unit = unitLabel(cheapestBrand.packSize);
+
+  return (
+    <section className="mx-auto mt-24 max-w-3xl">
+      <h2 className="font-display text-center text-2xl font-bold tracking-tight">
+        A real example: {label}
+      </h2>
+      <p className="mt-1 text-center text-sm text-muted-foreground">
+        Live prices from our data — this is exactly what a comparison looks like.
+      </p>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        {/* Branded (cheapest of the ranked list) */}
+        <Card>
+          <CardContent className="py-5">
+            <Badge variant="secondary">Cheapest branded</Badge>
+            <p className="mt-2 font-semibold">{cheapestBrand.brandName}</p>
+            {cheapestBrand.manufacturer && (
+              <p className="text-xs text-muted-foreground">{cheapestBrand.manufacturer}</p>
+            )}
+            <div className="font-display mt-3 text-3xl font-bold">
+              {formatINR(cheapestBrand.mrp)}
+              <span className="font-sans text-sm font-medium text-muted-foreground">
+                {" "}
+                / {cheapestBrand.packSize}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {formatINR(cheapestBrand.perUnitPrice)} per {unit}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Jan Aushadhi */}
+        <Card className="border-green-300 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
+          <CardContent className="py-5">
+            <Badge variant="default" className="bg-green-600 text-white">
+              <CheckCircle2 className="size-3" /> Jan Aushadhi
+            </Badge>
+            <p className="mt-2 font-semibold">{generic.genericName}</p>
+            <p className="text-xs text-muted-foreground">Pack of {generic.unitSize}</p>
+            <div className="font-display mt-3 text-3xl font-bold text-green-700 dark:text-green-400">
+              {formatINR(generic.mrp)}
+              <span className="font-sans text-sm font-medium text-muted-foreground">
+                {" "}
+                / pack
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {formatINR(generic.perUnitPrice)} per {unit} —{" "}
+              <span className="font-semibold text-green-700 dark:text-green-400">
+                {savingsPercentUnit}% cheaper
+              </span>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mt-4 text-center">
+        <Link
+          to={`/compare/${encodeURIComponent(compositionKey)}`}
+          className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
+        >
+          See the full comparison ({brands.length} brands) <ArrowRight className="size-4" />
+        </Link>
+      </div>
+    </section>
   );
 }

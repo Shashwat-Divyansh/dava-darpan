@@ -127,6 +127,17 @@ export default function Login() {
               Sign up
             </Link>
           </p>
+
+          {/* Guests can search & compare freely — only saving needs an account.
+              Send them back where they came from (never into the protected basket). */}
+          <p className="mt-3 border-t pt-3 text-center text-sm">
+            <Link
+              to={redirectTo.startsWith("/favorites") ? "/" : redirectTo}
+              className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Continue as guest — browse without an account →
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </div>

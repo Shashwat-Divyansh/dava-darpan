@@ -58,10 +58,11 @@ export default function SearchBar() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  function goToCompare(id) {
+  function goToCompare(compositionKey) {
     setOpen(false);
     setQuery("");
-    navigate(`/compare/${id}`);
+    // The key contains "|" and "+", so it must be URL-encoded in the path.
+    navigate(`/compare/${encodeURIComponent(compositionKey)}`);
   }
 
   function handleKeyDown(e) {
@@ -75,7 +76,7 @@ export default function SearchBar() {
     } else if (e.key === "Enter") {
       e.preventDefault();
       const pick = results[activeIndex] || results[0];
-      if (pick) goToCompare(pick.id);
+      if (pick) goToCompare(pick.compositionKey);
     } else if (e.key === "Escape") {
       setOpen(false);
     }
@@ -92,9 +93,9 @@ export default function SearchBar() {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setOpen(true)}
-          placeholder="Search a medicine (e.g. Dolo, Combiflam)…"
+          placeholder="Search a composition or brand — e.g. Paracetamol 650mg, or Dolo"
           aria-label="Search medicines"
-          className="h-12 rounded-xl pl-11 pr-10 text-base shadow-sm"
+          className="h-14 rounded-2xl pl-11 pr-10 text-base shadow-md sm:text-lg"
         />
         {loading && (
           <Loader2 className="absolute right-3.5 top-1/2 size-5 -translate-y-1/2 animate-spin text-muted-foreground" />
@@ -110,20 +111,33 @@ export default function SearchBar() {
           ) : (
             <ul className="max-h-80 overflow-auto py-1">
               {results.map((r, i) => (
-                <li key={r.id}>
+                <li key={r.compositionKey}>
+                  {/* Suggestions are COMPOSITIONS (strength-specific). A brand
+                      match shows as an alias: "Dolo 650 → Paracetamol 650mg". */}
                   <button
                     type="button"
                     onMouseEnter={() => setActiveIndex(i)}
-                    onClick={() => goToCompare(r.id)}
+                    onClick={() => goToCompare(r.compositionKey)}
                     className={cn(
                       "flex w-full flex-col items-start gap-0.5 px-4 py-2.5 text-left transition-colors",
                       i === activeIndex ? "bg-accent" : "hover:bg-accent/60"
                     )}
                   >
-                    <span className="font-medium">{r.brandName}</span>
+                    <span className="font-medium">
+                      {r.viaBrand ? (
+                        <>
+                          {r.viaBrand} <span className="text-muted-foreground">→</span> {r.label}
+                        </>
+                      ) : (
+                        r.label
+                      )}
+                    </span>
                     <span className="text-xs text-muted-foreground">
-                      {r.composition}
-                      {r.manufacturer ? ` · ${r.manufacturer}` : ""}
+                      {r.brandCount > 0
+                        ? `${r.brandCount} brand${r.brandCount === 1 ? "" : "s"} available`
+                        : "No curated brands"}
+                      {" · "}
+                      {r.hasGeneric ? "Jan Aushadhi listed" : "no Jan Aushadhi generic"}
                     </span>
                   </button>
                 </li>

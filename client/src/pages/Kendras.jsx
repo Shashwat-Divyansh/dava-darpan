@@ -230,13 +230,16 @@ function Results({ result }) {
                 <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                   Jan Aushadhi Kendra
                 </p>
-                <p className="font-semibold leading-tight">{k.name || "Unnamed kendra"}</p>
-                {k.address && <p className="mt-1 text-sm text-muted-foreground">{k.address}</p>}
+                {/* The ADDRESS is the headline — users care where the store is. */}
+                <p className="font-semibold leading-snug">
+                  {k.address || "Address not listed"}
+                </p>
                 <p className="mt-1 text-sm">
                   {k.district}
                   {k.district && k.state ? ", " : ""}
                   {k.state}
                 </p>
+                {k.name && <p className="mt-1 text-xs text-muted-foreground">Run by {k.name}</p>}
                 <div className="mt-2 flex items-center gap-2">
                   <Badge variant="saffron">PIN {k.pinCode}</Badge>
                   <span className="text-xs text-muted-foreground">{k.kendraCode}</span>

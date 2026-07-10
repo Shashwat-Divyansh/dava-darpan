@@ -17,19 +17,28 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Toggle a brand in/out of the savings basket.
- * - Logged in: adds/removes the favorite (heart fills green when saved).
- * - Guest: opens a login/signup modal. Both buttons carry ?redirect=<current
- *   page> so the user returns here after authenticating, then taps save again.
+ * Add-to-basket toggle, two targets:
+ *  - <FavoriteButton brandId={id} />            saves a SPECIFIC brand
+ *  - <FavoriteButton compositionKey={key} />    saves the JAN AUSHADHI generic
+ * `compact` renders an icon-only heart (used on brand rows).
+ * Guests get a login/signup modal preserving the current page as ?redirect=.
  */
-export default function FavoriteButton({ brandId, className }) {
+export default function FavoriteButton({ brandId, compositionKey, compact = false, className }) {
+  const isGenericTarget = !brandId && !!compositionKey;
   const { user } = useAuth();
-  const { favoriteIds, addFavorite, removeFavorite } = useFavorites();
+  const {
+    savedBrandIds,
+    savedGenericKeys,
+    addBrand,
+    addGeneric,
+    removeBrand,
+    removeGeneric,
+  } = useFavorites();
   const [busy, setBusy] = useState(false);
   const [authOpen, setAuthOpen] = useState(false); // guest auth modal
   const location = useLocation();
 
-  const saved = favoriteIds.has(brandId);
+  const saved = isGenericTarget ? savedGenericKeys.has(compositionKey) : savedBrandIds.has(brandId);
   const redirect = encodeURIComponent(location.pathname + location.search);
 
   async function toggle() {
@@ -41,8 +50,13 @@ export default function FavoriteButton({ brandId, className }) {
 
     setBusy(true);
     try {
-      if (saved) await removeFavorite(brandId);
-      else await addFavorite(brandId);
+      if (isGenericTarget) {
+        if (saved) await removeGeneric(compositionKey);
+        else await addGeneric(compositionKey);
+      } else {
+        if (saved) await removeBrand(brandId);
+        else await addBrand(brandId);
+      }
     } catch {
       // e.g. a 409 if it was already added in another tab — safe to ignore.
     } finally {
@@ -50,18 +64,47 @@ export default function FavoriteButton({ brandId, className }) {
     }
   }
 
+  const label = isGenericTarget
+    ? saved
+      ? "Jan Aushadhi in basket"
+      : "Add Jan Aushadhi to basket"
+    : saved
+      ? "Saved to basket"
+      : "Add to basket";
+
   return (
     <>
-      <Button
-        type="button"
-        variant={saved ? "default" : "outline"}
-        onClick={toggle}
-        disabled={busy}
-        className={cn(saved && "bg-green-600 hover:bg-green-700", className)}
-      >
-        <Heart className={cn("size-4", saved && "fill-current")} />
-        {saved ? "Saved to basket" : "Add to basket"}
-      </Button>
+      {compact ? (
+        /* Compact: icon-only heart, used on per-brand rows of the comparison. */
+        <Button
+          type="button"
+          variant={saved ? "default" : "outline"}
+          size="icon"
+          onClick={toggle}
+          disabled={busy}
+          aria-label={saved ? "Remove from basket" : "Add to basket"}
+          title={saved ? "Remove from basket" : "Add to basket"}
+          className={cn(saved && "bg-green-600 hover:bg-green-700", className)}
+        >
+          <Heart className={cn("size-4", saved && "fill-current")} />
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant={saved ? "default" : "outline"}
+          onClick={toggle}
+          disabled={busy}
+          className={cn(
+            saved && "bg-green-600 hover:bg-green-700",
+            // Generic add button sits on the green card — keep it readable.
+            isGenericTarget && !saved && "border-green-600/40 bg-white/60 dark:bg-transparent",
+            className
+          )}
+        >
+          <Heart className={cn("size-4", saved && "fill-current")} />
+          {label}
+        </Button>
+      )}
 
       {/* Guest-only: prompt to log in or sign up, preserving where to return. */}
       <Dialog open={authOpen} onOpenChange={setAuthOpen}>

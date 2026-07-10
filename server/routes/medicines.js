@@ -4,8 +4,9 @@ import mongoose from "mongoose";
 import Medicine from "../models/Medicine.js";
 import Brand from "../models/Brand.js";
 import Kendra from "../models/Kendra.js";
-import { buildComparison } from "../utils/pricing.js";
+import { buildComparison, parsePackSize, round2 } from "../utils/pricing.js";
 import { buildBrandComparison } from "../services/comparison.js";
+import { prettifyCompositionKey, isStrengthSpecific } from "../utils/labels.js";
 
 const router = Router();
 
@@ -16,9 +17,12 @@ function escapeRegex(str) {
 
 /**
  * GET /api/medicines/search?q=...   (public — guests can browse)
- * Powers the autocomplete. Matches brands by name OR composition, ranks
- * name-starts-with first, then name-contains, then composition matches.
- * Returns a lean payload of up to 10 results.
+ *
+ * COMPOSITION-FIRST autocomplete. Every suggestion is a composition at a
+ * specific strength (never a bare "Paracetamol"). Brand names act as aliases:
+ * typing "Dolo" surfaces "Paracetamol 650mg" with viaBrand: "Dolo 650".
+ * Suggestions ranked: brand-name matches first, then composition-text matches,
+ * then Jan Aushadhi generic-name matches. Up to 10 results.
  */
 router.get("/search", async (req, res) => {
   try {
@@ -29,33 +33,153 @@ router.get("/search", async (req, res) => {
     const contains = new RegExp(safe, "i");
     const startsWith = new RegExp("^" + safe, "i");
 
-    // One DB query: any brand whose name OR composition contains the query.
-    const brands = await Brand.find({
-      $or: [{ brandName: contains }, { composition: contains }],
-    })
-      .limit(30)
-      .lean();
+    // Candidates from three sources: brand names, brand composition text, and
+    // raw Jan Aushadhi generic names (so generics without a curated brand are
+    // still findable).
+    const [matchedBrands, matchedMeds] = await Promise.all([
+      Brand.find({ $or: [{ brandName: contains }, { composition: contains }] })
+        .limit(40)
+        .lean(),
+      Medicine.find({ genericName: contains, compositionKey: { $ne: "" } })
+        .limit(40)
+        .lean(),
+    ]);
 
-    // Rank: name starts-with (0) < name contains (1) < composition-only (2),
-    // then alphabetical within each tier.
-    const rank = (b) => {
-      if (startsWith.test(b.brandName)) return 0;
-      if (contains.test(b.brandName)) return 1;
-      return 2;
+    // Collect composition keys in ranked order; first source to add a key wins
+    // (so a brand-name match keeps its viaBrand alias info).
+    const ordered = [];
+    const seen = new Set();
+    const push = (key, viaBrand) => {
+      if (!key || seen.has(key) || !isStrengthSpecific(key)) return;
+      seen.add(key);
+      ordered.push({ key, viaBrand });
     };
-    brands.sort((a, b) => rank(a) - rank(b) || a.brandName.localeCompare(b.brandName));
 
-    const results = brands.slice(0, 10).map((b) => ({
-      id: b._id,
-      brandName: b.brandName,
-      composition: b.composition,
-      manufacturer: b.manufacturer,
+    const nameMatches = matchedBrands
+      .filter((b) => contains.test(b.brandName))
+      .sort(
+        (a, b) =>
+          (startsWith.test(b.brandName) ? 1 : 0) - (startsWith.test(a.brandName) ? 1 : 0) ||
+          a.brandName.localeCompare(b.brandName)
+      );
+    for (const b of nameMatches) push(b.compositionKey, b.brandName);
+    for (const b of matchedBrands) if (!contains.test(b.brandName)) push(b.compositionKey, null);
+    for (const m of matchedMeds) push(m.compositionKey, null);
+
+    const top = ordered.slice(0, 10);
+    const keys = top.map((o) => o.key);
+
+    // Enrich each suggestion: how many brands share the key, is a generic listed,
+    // and a readable label (curated brand text preferred over the key fallback).
+    const [brandsForKeys, genericKeys] = await Promise.all([
+      Brand.find({ compositionKey: { $in: keys } }).lean(),
+      Medicine.distinct("compositionKey", { compositionKey: { $in: keys } }),
+    ]);
+    const genericSet = new Set(genericKeys);
+    const brandsByKey = {};
+    for (const b of brandsForKeys) (brandsByKey[b.compositionKey] ||= []).push(b);
+
+    const results = top.map(({ key, viaBrand }) => ({
+      compositionKey: key,
+      label: brandsByKey[key]?.[0]?.composition || prettifyCompositionKey(key),
+      brandCount: brandsByKey[key]?.length || 0,
+      hasGeneric: genericSet.has(key),
+      viaBrand: viaBrand || undefined,
     }));
 
     res.json({ results });
   } catch (err) {
     console.error("search error:", err);
     res.status(500).json({ error: "Search failed" });
+  }
+});
+
+/**
+ * GET /api/medicines/compare/:compositionKey   (public — guests can browse)
+ *
+ * The composition-first comparison: for ONE exact composition+strength, return
+ * the Jan Aushadhi generic (cheapest per-unit if several are listed) and ALL
+ * branded medicines sharing the key, sorted by per-pack price ascending.
+ * Strengths are never merged — the key IS the product identity.
+ */
+router.get("/compare/:compositionKey", async (req, res) => {
+  try {
+    const key = (req.params.compositionKey || "").trim();
+    if (!key) return res.status(400).json({ error: "Missing composition key" });
+
+    const [generics, brands] = await Promise.all([
+      Medicine.find({ compositionKey: key }).lean(),
+      Brand.find({ compositionKey: key }).lean(),
+    ]);
+
+    if (generics.length === 0 && brands.length === 0) {
+      return res.status(404).json({ error: "No medicines found for this composition" });
+    }
+
+    // Generics priced per-unit; the cheapest per-unit one is THE generic shown.
+    const pricedGenerics = generics
+      .map((g) => {
+        const packCount = parsePackSize(g.unitSize);
+        return {
+          genericName: g.genericName,
+          mrp: g.mrp,
+          unitSize: g.unitSize,
+          packCount,
+          perUnitPrice: round2(g.mrp / packCount),
+        };
+      })
+      .sort((a, b) => a.perUnitPrice - b.perUnitPrice);
+    const generic = pricedGenerics[0] || null;
+
+    // Brands ranked by PER-TABLET price — the true apples-to-apples figure
+    // (pack sizes differ, so pack price alone can mislead). Pack price stays
+    // the prominent DISPLAY figure on each row; only ranking uses per-unit.
+    const pricedBrands = brands
+      .map((b) => {
+        const packCount = parsePackSize(b.packSize);
+        return {
+          id: b._id,
+          brandName: b.brandName,
+          manufacturer: b.manufacturer,
+          mrp: b.mrp,
+          packSize: b.packSize,
+          packCount,
+          perUnitPrice: round2(b.mrp / packCount),
+        };
+      })
+      .sort((a, b) => a.perUnitPrice - b.perUnitPrice || a.mrp - b.mrp);
+    const cheapestBrand = pricedBrands[0] || null;
+
+    // Headline savings vs the cheapest branded option, in per-unit terms
+    // (like-for-like). Per-pack diff is included for context but must never
+    // contradict the per-unit truth in the UI.
+    let savingsPerUnit = null;
+    let savingsPercentUnit = null;
+    let savingsPerPack = null;
+    if (generic && cheapestBrand) {
+      savingsPerUnit = round2(cheapestBrand.perUnitPrice - generic.perUnitPrice);
+      savingsPercentUnit =
+        cheapestBrand.perUnitPrice > 0
+          ? Math.round((savingsPerUnit / cheapestBrand.perUnitPrice) * 100)
+          : null;
+      savingsPerPack = round2(cheapestBrand.mrp - generic.mrp);
+    }
+
+    res.json({
+      compositionKey: key,
+      label: brands[0]?.composition || prettifyCompositionKey(key),
+      hasGeneric: generic !== null,
+      generic,
+      otherGenerics: pricedGenerics.slice(1),
+      brandCount: pricedBrands.length,
+      brands: pricedBrands,
+      savingsPerUnit,
+      savingsPercentUnit,
+      savingsPerPack,
+    });
+  } catch (err) {
+    console.error("compare error:", err);
+    res.status(500).json({ error: "Failed to build comparison" });
   }
 });
 
