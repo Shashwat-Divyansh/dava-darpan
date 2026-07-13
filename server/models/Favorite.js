@@ -26,6 +26,9 @@ const favoriteSchema = new mongoose.Schema(
     brand: { type: mongoose.Schema.Types.ObjectId, ref: "Brand" },
     // kind "generic" rows:
     compositionKey: { type: String },
+    // Packs the user plans to buy — multiplies this row in the basket totals.
+    // Persisted so the basket survives refresh/login (it's a saved plan).
+    quantity: { type: Number, default: 1, min: 1 },
   },
   { timestamps: true } // gives us createdAt
 );

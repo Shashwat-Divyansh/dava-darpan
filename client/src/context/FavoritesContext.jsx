@@ -65,6 +65,18 @@ export function FavoritesProvider({ children }) {
     setFavorites((prev) => prev.filter((f) => f.favoriteId !== favoriteId));
   }
 
+  /** Set how many packs a row counts for. Optimistic; re-syncs on failure. */
+  async function updateQuantity(favoriteId, quantity) {
+    setFavorites((prev) =>
+      prev.map((f) => (f.favoriteId === favoriteId ? { ...f, quantity } : f))
+    );
+    try {
+      await api.patch(`/favorites/${favoriteId}`, { quantity });
+    } catch {
+      refresh(); // server rejected (or offline) — restore the truth
+    }
+  }
+
   /** Remove by what the UI knows (brand id / composition key). */
   async function removeBrand(brandId) {
     const row = favorites.find((f) => f.kind === "brand" && f.brand.id === brandId);
@@ -84,6 +96,7 @@ export function FavoritesProvider({ children }) {
     removeBrand,
     removeGeneric,
     removeByFavoriteId,
+    updateQuantity,
     refresh,
     loading,
   };

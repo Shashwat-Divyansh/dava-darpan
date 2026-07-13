@@ -80,13 +80,6 @@ export default function Home() {
               </Badge>
             ))}
           </div>
-
-          {stats && (
-            <p className="mt-5 text-xs text-muted-foreground">
-              Comparing {fmt(stats.genericCount)} Jan Aushadhi generics · {fmt(stats.kendraCount)}{" "}
-              kendras nationwide.
-            </p>
-          )}
         </section>
 
         {/* ---------- LIVE EXAMPLE (real data, true preview) ---------- */}
@@ -151,6 +144,14 @@ export default function Home() {
             </Link>
           ))}
         </section>
+
+        {/* ---------- STATS (closes the page) ---------- */}
+        {stats && (
+          <p className="mt-16 text-center text-xs text-muted-foreground">
+            Comparing {fmt(stats.genericCount)} Jan Aushadhi generics · {fmt(stats.kendraCount)}{" "}
+            kendras nationwide.
+          </p>
+        )}
       </main>
 
       <footer className="border-t">

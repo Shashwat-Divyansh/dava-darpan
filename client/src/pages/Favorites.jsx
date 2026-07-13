@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  * "if you'd bought brands: ₹X · buying generics where available: ₹Y".
  */
 export default function Favorites() {
-  const { favorites, removeByFavoriteId, loading } = useFavorites();
+  const { favorites, removeByFavoriteId, updateQuantity, loading } = useFavorites();
 
   // Track UNCHECKED rows (by favoriteId); anything not in the set counts.
   const [unchecked, setUnchecked] = useState(() => new Set());
@@ -34,9 +34,9 @@ export default function Favorites() {
     });
   }
 
-  // Totals from CHECKED rows only, per-pack prices:
-  //  brand row:   branded += brand pack; generic += equivalent pack (or brand pack if none)
-  //  generic row: branded += cheapest-branded pack (or generic pack if no brand); generic += generic pack
+  // Totals from CHECKED rows only, per-pack prices × quantity:
+  //  brand row:   branded += brand pack × qty; generic += equivalent pack × qty (or brand pack × qty if none)
+  //  generic row: branded += cheapest-branded pack × qty (or generic pack × qty if no brand); generic += generic pack × qty
   const totals = useMemo(() => {
     let brandedTotal = 0;
     let genericTotal = 0;
@@ -47,23 +47,30 @@ export default function Favorites() {
     for (const f of favorites) {
       if (unchecked.has(f.favoriteId)) continue;
       checkedCount++;
+      const qty = f.quantity || 1;
 
       if (f.kind === "generic") {
-        genericTotal += f.generic.mrp;
-        brandedTotal += f.cheapestBrand ? f.cheapestBrand.mrp : f.generic.mrp;
+        genericTotal += f.generic.mrp * qty;
+        brandedTotal += (f.cheapestBrand ? f.cheapestBrand.mrp : f.generic.mrp) * qty;
       } else {
-        brandedTotal += f.brand.mrp;
+        brandedTotal += f.brand.mrp * qty;
         if (f.hasGenericEquivalent) {
-          genericTotal += f.cheapestGeneric.mrp;
+          genericTotal += f.cheapestGeneric.mrp * qty;
         } else {
-          genericTotal += f.brand.mrp; // no generic → stays at branded price
-          noEquivAmount += f.brand.mrp;
+          genericTotal += f.brand.mrp * qty; // no generic → stays at branded price
+          noEquivAmount += f.brand.mrp * qty; // disclosure scales with qty too
           noEquivCount++;
         }
       }
     }
 
-    const savings = brandedTotal - genericTotal;
+    // Guard against floating-point drift from the multiplications.
+    const r2 = (n) => Math.round(n * 100) / 100;
+    brandedTotal = r2(brandedTotal);
+    genericTotal = r2(genericTotal);
+    noEquivAmount = r2(noEquivAmount);
+
+    const savings = r2(brandedTotal - genericTotal);
     const savingsPercent = brandedTotal > 0 ? Math.round((savings / brandedTotal) * 100) : 0;
     return { brandedTotal, genericTotal, savings, savingsPercent, noEquivAmount, noEquivCount, checkedCount };
   }, [favorites, unchecked]);
@@ -96,6 +103,7 @@ export default function Favorites() {
                     checked={isChecked(f.favoriteId)}
                     onToggle={() => toggleChecked(f.favoriteId)}
                     onRemove={() => removeByFavoriteId(f.favoriteId)}
+                    onQuantityChange={(q) => updateQuantity(f.favoriteId, q)}
                   />
                 ) : (
                   <BrandFavoriteRow
@@ -104,6 +112,7 @@ export default function Favorites() {
                     checked={isChecked(f.favoriteId)}
                     onToggle={() => toggleChecked(f.favoriteId)}
                     onRemove={() => removeByFavoriteId(f.favoriteId)}
+                    onQuantityChange={(q) => updateQuantity(f.favoriteId, q)}
                   />
                 )
               )}
@@ -146,7 +155,7 @@ function RowShell({ checked, onToggle, onRemove, ariaName, children }) {
 }
 
 /** A saved JAN AUSHADHI GENERIC (kind "generic"). */
-function GenericRow({ item, checked, onToggle, onRemove }) {
+function GenericRow({ item, checked, onToggle, onRemove, onQuantityChange }) {
   const { label, generic, cheapestBrand, savingsPerPack } = item;
   const unit = unitLabelOf(cheapestBrand?.packSize || "");
 
@@ -201,12 +210,14 @@ function GenericRow({ item, checked, onToggle, onRemove }) {
           </div>
         )}
       </div>
+
+      <QtyControl value={item.quantity || 1} onChange={onQuantityChange} name={label} />
     </RowShell>
   );
 }
 
 /** A saved BRANDED medicine (kind "brand") — unchanged comparison behavior. */
-function BrandFavoriteRow({ item, checked, onToggle, onRemove }) {
+function BrandFavoriteRow({ item, checked, onToggle, onRemove, onQuantityChange }) {
   const { brand, hasGenericEquivalent, cheapestGeneric } = item;
   const perPackSavings = hasGenericEquivalent ? brand.mrp - cheapestGeneric.mrp : 0;
 
@@ -261,7 +272,42 @@ function BrandFavoriteRow({ item, checked, onToggle, onRemove }) {
           Save {formatINR(perPackSavings)} / pack
         </p>
       )}
+
+      <QtyControl value={item.quantity || 1} onChange={onQuantityChange} name={brand.brandName} />
     </RowShell>
+  );
+}
+
+/**
+ * Quantity stepper (− / n / +). Minimum 1 — removing a row entirely is the
+ * trash button's job. Multiplies the row's contribution to the totals.
+ */
+function QtyControl({ value, onChange, name }) {
+  const btn =
+    "flex size-7 items-center justify-center rounded-full text-base font-semibold transition-colors hover:bg-accent disabled:opacity-40 disabled:hover:bg-transparent";
+  return (
+    <div className="mt-3 inline-flex items-center gap-0.5 rounded-full border bg-background px-1.5 py-0.5">
+      <button
+        type="button"
+        className={btn}
+        disabled={value <= 1}
+        onClick={() => onChange(value - 1)}
+        aria-label={`Decrease quantity of ${name}`}
+      >
+        −
+      </button>
+      <span className="w-7 text-center text-sm font-semibold tabular-nums">{value}</span>
+      <button
+        type="button"
+        className={btn}
+        disabled={value >= 99}
+        onClick={() => onChange(value + 1)}
+        aria-label={`Increase quantity of ${name}`}
+      >
+        +
+      </button>
+      <span className="mr-1.5 ml-1 text-xs text-muted-foreground">pack{value === 1 ? "" : "s"}</span>
+    </div>
   );
 }
 

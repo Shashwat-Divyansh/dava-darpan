@@ -36,7 +36,19 @@ export default function CountUp({ value, format = (n) => n, duration = 900 }) {
     };
 
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+
+    // Browsers pause requestAnimationFrame in hidden/background tabs — without
+    // this, the number would freeze at its starting value. Once the animation
+    // window has passed, guarantee the true value is shown.
+    const settle = setTimeout(() => {
+      fromRef.current = target;
+      setDisplay(target);
+    }, duration + 100);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(settle);
+    };
   }, [value, duration]);
 
   return <span>{format(display)}</span>;

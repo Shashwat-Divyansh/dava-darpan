@@ -15,15 +15,17 @@ router.use(requireAuth);
 /** Shape one favorite document into a basket row (or null if unresolvable). */
 async function toRow(fav) {
   const kind = fav.kind || "brand"; // docs created before "kind" existed are brand rows
+  const quantity = fav.quantity || 1; // pre-quantity docs default to 1
   if (kind === "generic") {
     const cmp = await buildGenericComparison(fav.compositionKey);
     if (!cmp) return null;
-    return { favoriteId: fav._id, kind: "generic", favoritedAt: fav.createdAt, ...cmp };
+    return { favoriteId: fav._id, kind: "generic", quantity, favoritedAt: fav.createdAt, ...cmp };
   }
   if (!fav.brand) return null; // orphaned (brand removed)
   return {
     favoriteId: fav._id,
     kind: "brand",
+    quantity,
     favoritedAt: fav.createdAt,
     ...(await buildBrandComparison(fav.brand)),
   };
@@ -91,6 +93,37 @@ router.post("/", async (req, res) => {
   } catch (err) {
     console.error("favorite add error:", err);
     res.status(500).json({ error: "Failed to add favorite" });
+  }
+});
+
+/**
+ * PATCH /api/favorites/:favoriteId
+ * Body: { quantity } — how many packs of this row the user plans to buy.
+ * Clamped to a sane 1–99 range; scoped to the logged-in user.
+ */
+router.patch("/:favoriteId", async (req, res) => {
+  try {
+    const { favoriteId } = req.params;
+    if (!mongoose.isValidObjectId(favoriteId)) {
+      return res.status(400).json({ error: "Invalid favorite id" });
+    }
+
+    const quantity = Math.floor(Number(req.body?.quantity));
+    if (!Number.isFinite(quantity) || quantity < 1 || quantity > 99) {
+      return res.status(400).json({ error: "Quantity must be a whole number between 1 and 99" });
+    }
+
+    const fav = await Favorite.findOneAndUpdate(
+      { _id: favoriteId, user: req.user.id },
+      { $set: { quantity } },
+      { new: true }
+    );
+    if (!fav) return res.status(404).json({ error: "Favorite not found" });
+
+    return res.json({ favoriteId: fav._id, quantity: fav.quantity });
+  } catch (err) {
+    console.error("favorite quantity error:", err);
+    res.status(500).json({ error: "Failed to update quantity" });
   }
 });
 
