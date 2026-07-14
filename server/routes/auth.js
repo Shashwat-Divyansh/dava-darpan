@@ -50,10 +50,14 @@ router.post("/signup", async (req, res) => {
     // ---- Create the user (password is hashed by the model's pre-save hook) ----
     const user = await User.create({ name, email: normalizedEmail, password });
 
-    // ---- Issue JWT as an httpOnly cookie ----
-    res.cookie("token", signToken(user), getCookieOptions());
+    // ---- Issue the JWT both ways ----
+    // Cookie: kept for local/same-site sessions. Body: the primary path — the
+    // SPA stores it and sends "Authorization: Bearer", which works cross-domain
+    // where browsers block third-party cookies (Vercel ↔ Render).
+    const token = signToken(user);
+    res.cookie("token", token, getCookieOptions());
 
-    return res.status(201).json({ user: publicUser(user) });
+    return res.status(201).json({ user: publicUser(user), token });
   } catch (err) {
     // Handle a duplicate-key race (two signups at once) and schema validation errors.
     if (err.code === 11000) {
@@ -92,8 +96,11 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    res.cookie("token", signToken(user), getCookieOptions());
-    return res.status(200).json({ user: publicUser(user) });
+    // Same dual delivery as signup: cookie for local, token-in-body for the
+    // cross-domain Bearer flow.
+    const token = signToken(user);
+    res.cookie("token", token, getCookieOptions());
+    return res.status(200).json({ user: publicUser(user), token });
   } catch (err) {
     console.error("Login error:", err);
     return res.status(500).json({ error: "Something went wrong. Please try again." });
@@ -102,7 +109,9 @@ router.post("/login", async (req, res) => {
 
 /**
  * POST /api/auth/logout
- * Clears the auth cookie.
+ * Clears the auth cookie. With Bearer delivery, logout is primarily a client
+ * action (discard the stored token) — this endpoint just cleans up any cookie
+ * session. Stateless JWTs aren't blacklisted server-side (fine for this app).
  */
 router.post("/logout", (req, res) => {
   res.clearCookie("token", getBaseCookieOptions());

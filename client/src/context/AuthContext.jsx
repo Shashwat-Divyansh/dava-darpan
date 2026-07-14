@@ -1,10 +1,14 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
-import api from "@/lib/api";
+import api, { getToken, setToken } from "@/lib/api";
 
 /**
  * AuthContext holds the logged-in user and the auth actions, so any component
  * can read the current user or call signup/login/logout without prop-drilling.
+ *
+ * The session token is a JWT stored in localStorage ("dd_token") and sent as an
+ * Authorization: Bearer header (see lib/api.js) — cookies don't survive the
+ * cross-domain deployment. Locally, an httpOnly cookie still works as fallback.
  */
 const AuthContext = createContext(null);
 
@@ -14,7 +18,8 @@ export function AuthProvider({ children }) {
   // It prevents protected routes from redirecting before we know who the user is.
   const [loading, setLoading] = useState(true);
 
-  // On mount, ask the server whether the cookie corresponds to a valid session.
+  // On mount, restore the session: the stored token (or local cookie) is
+  // validated by /auth/me. A 401 means expired/invalid — discard the token.
   useEffect(() => {
     let cancelled = false;
 
@@ -23,7 +28,7 @@ export function AuthProvider({ children }) {
         const { data } = await api.get("/auth/me");
         if (!cancelled) setUser(data.user);
       } catch {
-        // A 401 here just means "not logged in" — not an error worth surfacing.
+        if (getToken()) setToken(null); // stale/expired token — clear it
         if (!cancelled) setUser(null);
       } finally {
         if (!cancelled) setLoading(false);
@@ -40,19 +45,28 @@ export function AuthProvider({ children }) {
   // failure (axios rejects non-2xx) so the calling form can show the error.
   async function signup({ name, email, password }) {
     const { data } = await api.post("/auth/signup", { name, email, password });
+    setToken(data.token); // store BEFORE any follow-up requests need the header
     setUser(data.user);
     return data.user;
   }
 
   async function login({ email, password }) {
     const { data } = await api.post("/auth/login", { email, password });
+    setToken(data.token);
     setUser(data.user);
     return data.user;
   }
 
   async function logout() {
-    await api.post("/auth/logout");
+    // The real logout is discarding the client-side token; the endpoint call
+    // just clears any cookie session and is best-effort.
+    setToken(null);
     setUser(null);
+    try {
+      await api.post("/auth/logout");
+    } catch {
+      /* already logged out locally */
+    }
   }
 
   const value = { user, loading, signup, login, logout };
