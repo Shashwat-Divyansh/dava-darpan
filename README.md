@@ -12,18 +12,6 @@ Dava Darpan helps anyone compare a branded medicine with its **Jan Aushadhi (gen
 
 ---
 
-## Why I built this
-
-One afternoon the maid who works at our home had brought some of her own medicines with her. I picked one up out of curiosity to see what it was for — and realised it had the *exact same salt composition* as a medicine my own father takes. But the packaging was completely different and cheaper-looking, with a "Government of India" logo on it.
-
-When I asked her about it, she told me it was something the government provides at much lower rates. That particular medicine was around **50–60% cheaper** than the branded version my family was buying.
-
-That stuck with me. I had no idea this existed — and if I didn't know, despite the savings sitting right there, how many people don't? The problem isn't that people don't care about saving money on medicine. It's that the cheaper equivalent is **invisible at the point of purchase.**
-
-Dava Darpan is my attempt to make it visible.
-
----
-
 ## What it does
 
 - **Search by composition or brand** — type "Paracetamol 650mg" (what's actually on a prescription) or a brand you recognise like "Dolo." Brand names resolve to the right composition automatically — searching "Dolo" takes you straight to the Paracetamol 650mg page.
